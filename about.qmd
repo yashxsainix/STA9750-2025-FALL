@@ -1,0 +1,9 @@
+---
+title: About This Site
+page-layout: article
+---
+
+This website hosts Mini‑Project #01 for STA 9750 — *Processing Netflix Top 10 data* with R, **dplyr**, and **Quarto**.
+
+- The **docs/** folder here is **pre-rendered** so you can publish on GitHub Pages even if Quarto fails locally.
+- The **source files** (`mp01.qmd`, `about.qmd`) contain all assignment code; render later when your Quarto environment is clean.
