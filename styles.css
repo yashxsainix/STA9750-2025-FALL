@@ -1,0 +1,5 @@
+/* Gentle typographic polish */
+body { line-height: 1.5; }
+.navbar { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.figure-caption { color: #666; }
+.table { font-size: 0.95rem; }

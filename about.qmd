@@ -1,0 +1,6 @@
+---
+title: About This Site
+page-layout: article
+---
+
+This website hosts Mini‑Project #01 for STA 9750 — *Processing Netflix Top 10 data* with R, **dplyr**, and **Quarto**. It demonstrates reproducible research, light EDA, and press-release style storytelling.
