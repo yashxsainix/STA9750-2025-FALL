@@ -5,7 +5,6 @@
 
 **Live report:**  
 - https://yashxsainix.github.io/STA9750-2025-FALL/mp01.html  
-- https://yashxsainix.github.io/STA9750-2025-FALL-1/mp01.html  
 *(Keep the one that matches your repo name and remove the other.)*
 
 This repository contains my **Quarto** source (`mp01.qmd`) and the rendered HTML (`docs/mp01.html`) for **Mini‑Project #01: Gourmet Cheeseburgers Across the Globe**. The analysis downloads Netflix’s public Top‑10 datasets (global + per‑country), cleans minor issues (converting the literal string **"N/A"** to proper `NA`), performs EDA with **tidyverse**, **DT** tables, and **ggplot2**, and wraps findings as **press‑release‑style** summaries suitable for PR.
