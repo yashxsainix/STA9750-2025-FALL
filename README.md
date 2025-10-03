@@ -1,7 +1,6 @@
-# MP01 — Netflix Top 10 (Quarto Project)
-
+# MP01 — Netflix Top 10 
 **Course:** STA 9750 (Fall 2025)  
-**Author:** Yash Saini  
+**Author:** Yashpal Saini  
 
 **Live report:**  
 - https://yashxsainix.github.io/STA9750-2025-FALL/mp01.html 
