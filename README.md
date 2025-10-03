@@ -25,4 +25,4 @@ Loaded in the analysis:
 - **DT** (interactive tables)
 - **lubridate** (dates)
 - **stringr** (string helpers)
-- **scales** (axis labels; uses `label_number(scale_cut = cut_short_scale())`)
+- **scales** (axis labels; uses)
