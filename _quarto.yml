@@ -1,0 +1,47 @@
+
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "MP02 — Backyards Affordable for All by Yashpal Saini"
+  favicon: images/favicon.svg
+  navbar:
+    left:
+      - href: index.qmd
+        text: "Home & Full Report"
+    right:
+      - text: "Glossary"
+        menu:
+          - text: "CBSA"
+            href: "#glossary-cbsa"
+          - text: "RBI"
+            href: "#glossary-rbi"
+          - text: "HGC"
+            href: "#glossary-hgc"
+          - text: "YIMBY"
+            href: "#glossary-yimby"
+  page-footer:
+    right: "<span style='opacity:.75'>Baruch College MSBA 2025 — Mini Project 02 | © Yashpal Saini</span>"
+
+format:
+  html:
+    theme:
+      light: styles/cute.scss
+      dark: styles/cute-dark.scss
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-title: "On this page"
+    smooth-scroll: true
+    code-fold: true
+    code-tools: true
+    df-print: paged
+    include-in-header: styles/bubbles.html
+    embed-resources: false
+  pdf:
+    toc: true
+    number-sections: false
+    df-print: kable
+
+date: "2025-10-23"
