@@ -1,28 +1,24 @@
-# MP01 — Netflix Top 10 
-**Course:** STA 9750 (Fall 2025)  
-**Author:** Yashpal Saini  
 
-**Live report:**  
-- https://yashxsainix.github.io/STA9750-2025-FALL/mp01.html 
+# MP02 — Backyards Affordable for All by Yashpal Saini
 
-This repository contains my **Quarto** source (`mp01.qmd`) and the rendered HTML (`docs/mp01.html`) for **Mini‑Project #01: Gourmet Cheeseburgers Across the Globe**. The analysis downloads Netflix’s public Top‑10 datasets (global + per‑country), cleans minor issues (converting the literal string **"N/A"** to proper `NA`), performs EDA with **tidyverse**, **DT** tables, and **ggplot2**, and wraps findings as **press‑release‑style** summaries suitable for PR.
+Dual‑mode Quarto/R Markdown project. Renders **offline** (dummy data) or **online** (live ACS via `tidycensus` if `CENSUS_API_KEY` is set).
 
-## How to render the Quarto file
-```bash
-# Standard render
-quarto render mp01.qmd
+## Quickstart
+1. Open this folder in RStudio.
+2. (Optional) Offline mode (no internet/APIs):
+   ```r
+   Sys.setenv(MP02_OFFLINE = "1")
+   ```
+3. (Optional) Live mode (requires key):
+   ```r
+   Sys.setenv(CENSUS_API_KEY = "YOUR_KEY")
+   ```
+4. Render:
+   ```r
+   # Rmd
+   rmarkdown::render("mp02_final.Rmd")
+   # Quarto
+   quarto::quarto_render("index.qmd")
+   ```
 
-```
-
-## R packages used
-Install (once) from an R console:
-```r
-install.packages(c("tidyverse","DT","lubridate","stringr","scales"))
-```
-
-Loaded in the analysis:
-- **tidyverse** (dplyr, readr, ggplot2, etc.)
-- **DT** (interactive tables)
-- **lubridate** (dates)
-- **stringr** (string helpers)
-- **scales** (axis labels; uses)
+Packages auto‑install with a safe CRAN mirror. Widgets (plotly/DT/leaflet) include PDF fallbacks.
