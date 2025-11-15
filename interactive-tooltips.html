@@ -1,0 +1,21 @@
+<!-- interactive-tooltips.html -->
+<style>
+.tooltip {
+  position: absolute; background: #14532d; color: white; padding: 8px 12px;
+  border-radius: 6px; font-size: 0.8rem; opacity: 0; transition: all 0.3s;
+  pointer-events: none; z-index: 991; transform: translateY(10px);
+}
+.tooltip.show { opacity: 1; transform: translateY(0); }
+.js-plotly-plot:hover .tooltip, .leaflet-container:hover .tooltip { display: block; }
+</style>
+
+<script>
+document.querySelectorAll(".js-plotly-plot, .leaflet-container").forEach(el => {
+  const tooltip = document.createElement("div");
+  tooltip.className = "tooltip";
+  tooltip.textContent = el.classList.contains("leaflet-container") ? "Hover points for species details" : "Trees reduce heat by 8°F";
+  el.appendChild(tooltip);
+  el.onmouseenter = () => tooltip.classList.add("show");
+  el.onmouseleave = () => tooltip.classList.remove("show");
+});
+</script>

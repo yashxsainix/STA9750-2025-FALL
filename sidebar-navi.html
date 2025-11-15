@@ -1,0 +1,139 @@
+<!-- sidebar-nav.html -->
+<nav id="sidebar-nav" class="sidebar-nav hidden">
+  <div class="sidebar-header">
+    <span>Navigation</span>
+    <button id="sidebar-close" class="nav-btn">×</button>
+  </div>
+  <ul id="sidebar-list" class="sidebar-list"></ul>
+</nav>
+
+<button id="sidebar-toggle" class="nav-btn">Menu</button>
+
+<style>
+/* Sidebar: Only as tall as content */
+.sidebar-nav {
+  position: fixed;
+  top: 0; right: 0;
+  width: 250px;
+  max-height: 100vh;
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+  overflow-y: auto;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.05);
+  transform: translateX(100%);
+}
+.sidebar-nav:not(.hidden) { transform: translateX(0); }
+
+.sidebar-header {
+  padding: 16px;
+  background: #14532d;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky; top: 0; z-index: 1;
+}
+
+.sidebar-list {
+  list-style: none; padding: 0; margin: 0;
+}
+.sidebar-list a {
+  display: block; padding: 12px 16px;
+  color: #374151; text-decoration: none;
+  font-size: 0.95rem; transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+.sidebar-list a:hover,
+.sidebar-list a.active {
+  background: #ecfdf5;
+  color: #14532d;
+  font-weight: 600;
+  border-left-color: #2d6a4f;
+}
+.sidebar-list .level2 { padding-left: 32px; font-size: 0.9rem; }
+
+.nav-btn {
+  position: fixed;
+  top: 20px; right: 20px;
+  background: #14532d; color: white;
+  border: none; padding: 8px 12px;
+  border-radius: 6px; font-size: 1.1rem;
+  cursor: pointer; z-index: 1001;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+#sidebar-close { background: none; font-size: 1.4rem; padding: 0; }
+
+@media (max-width: 992px) {
+  .sidebar-nav { width: 280px; }
+  .sidebar-nav:not(.hidden) { transform: translateX(-280px); }
+  #sidebar-toggle { display: block; }
+}
+@media (min-width: 993px) {
+  .sidebar-nav { transform: translateX(0) !important; }
+  #sidebar-toggle { display: none; }
+}
+
+body.dark-mode .sidebar-nav { background: #1e1e1e; border-left-color: #333; }
+body.dark-mode .sidebar-header { background: #0a2a17; }
+body.dark-mode .sidebar-list a { color: #c0c0c0; }
+body.dark-mode .sidebar-list a:hover,
+body.dark-mode .sidebar-list a.active { background: #0a2a17; color: #ecfdf5; border-left-color: #52b788; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const list = document.getElementById("sidebar-list");
+  const headers = document.querySelectorAll("h2, h3");
+  const sidebar = document.getElementById("sidebar-nav");
+  const toggle = document.getElementById("sidebar-toggle");
+  const close = document.getElementById("sidebar-close");
+
+  headers.forEach((h, i) => {
+    const id = `sec-${i}`;
+    if (!h.id) h.id = id;
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = `#${id}`;
+    a.textContent = h.textContent.trim();
+    a.className = h.tagName === "H3" ? "level2" : "";
+    li.appendChild(a);
+    list.appendChild(li);
+  });
+
+  document.querySelectorAll(".sidebar-list a").forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute("href"));
+      target.scrollIntoView({ behavior: "smooth" });
+      document.querySelectorAll(".sidebar-list a").forEach(x => x.classList.remove("active"));
+      a.classList.add("active");
+      if (window.innerWidth <= 992) sidebar.classList.add("hidden");
+    });
+  });
+
+  window.addEventListener("scroll", () => {
+    let current = "";
+    headers.forEach(h => {
+      if (h.getBoundingClientRect().top <= 120) current = h.id;
+    });
+    document.querySelectorAll(".sidebar-list a").forEach(a => {
+      a.classList.toggle("active", a.getAttribute("href") === `#${current}`);
+    });
+  });
+
+  toggle.addEventListener("click", () => sidebar.classList.remove("hidden"));
+  close.addEventListener("click", () => sidebar.classList.add("hidden"));
+
+  document.addEventListener("click", (e) => {
+    if (window.innerWidth <= 992 && !sidebar.contains(e.target) && e.target !== toggle) {
+      sidebar.classList.add("hidden");
+    }
+  });
+
+  if (window.innerWidth > 992) sidebar.classList.remove("hidden");
+});
+</script>

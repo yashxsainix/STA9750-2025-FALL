@@ -1,0 +1,35 @@
+<!-- cursor-trail.html -->
+<canvas id="cursor-trail"></canvas>
+
+<style>
+#cursor-trail {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 9999; opacity: 0.6;
+}
+</style>
+
+<script>
+const canvas = document.getElementById("cursor-trail");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+document.addEventListener("mousemove", (e) => {
+  particles.push({ x: e.clientX, y: e.clientY, age: 0 });
+});
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles = particles.filter(p => p.age < 30);
+  particles.forEach(p => {
+    p.age++;
+    ctx.fillStyle = `rgba(20, 83, 45, ${1 - p.age/30})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.age/3, 0, Math.PI*2);
+    ctx.fill();
+  });
+  requestAnimationFrame(animate);
+}
+animate();
+</script>

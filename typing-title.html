@@ -1,0 +1,14 @@
+<!-- typing-title.html -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const title = document.querySelector("h1.title");
+  if (!title) return;
+  const text = title.textContent;
+  title.textContent = "";
+  let i = 0;
+  const timer = setInterval(() => {
+    title.textContent += text[i];
+    if (++i === text.length) clearInterval(timer);
+  }, 80);
+});
+</script>
