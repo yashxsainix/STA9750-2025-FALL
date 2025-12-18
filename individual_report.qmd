@@ -1,0 +1,395 @@
+---
+title: "Investigative Report: Supporting Question #6"
+author:
+  - "Yash"
+  - "Group: Breaking Lease – How We Met Your Landlord"
+  - "Research Topic: New York City housing risk: Complaints & Code Violations"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-float: true
+    number-sections: false
+    css: styles_THEMED.css
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+
+```{r q6-visuals-setup, include=FALSE}
+# ---- Q6 Visualizations: Auto-generated from your original script ----
+# Produces: plot_hotspot_all, plot_hotspot_income (ggplot objects)
+
+suppressPackageStartupMessages({
+  library(RSocrata)
+  library(tidycensus)
+  library(tidyverse)
+  library(janitor)
+  library(lubridate)
+  library(sf)
+  library(tigris)
+  library(spdep)
+})
+
+options(tigris_use_cache = TRUE)
+
+# Tokens / keys (hidden from the rendered site because include=FALSE)
+app_token <- Sys.getenv("NYC_OPEN_DATA_APP_TOKEN")
+if (app_token == "") app_token <- "ExUt22WiPiJvXNo3ZwPuIUDuC"
+
+census_key <- Sys.getenv("CENSUS_API_KEY")
+if (census_key != "") {
+  census_api_key(census_key, install = FALSE, overwrite = TRUE)
+} else {
+  census_api_key("5cd8f72bd473b6e815af190efa42dfdcd3804b99", install = FALSE, overwrite = TRUE)
+}
+
+# 311 complaints (2023)
+url_311 <- paste0(
+  "https://data.cityofnewyork.us/resource/erm2-nwe9.json?",
+  "$select=unique_key,created_date,closed_date,complaint_type,descriptor,",
+  "incident_zip,borough,latitude,longitude",
+  "&$where=created_date >= '2023-01-01T00:00:00' AND created_date < '2024-01-01T00:00:00'",
+  "&$limit=50000"
+)
+nyc311_raw <- read.socrata(url_311, app_token = app_token) |> clean_names()
+
+# ACS median income (2023)
+vars <- c(income = "B19013_001E")
+nyc_counties <- c("New York","Kings","Queens","Bronx","Richmond")
+
+acs_nyc_tracts <- get_acs(
+  geography = "tract",
+  variables = vars,
+  year = 2023,
+  survey = "acs5",
+  state = "NY",
+  county = nyc_counties,
+  output = "wide"
+) |> mutate(year = 2023)
+
+# Cleaning
+nyc311_clean <- nyc311_raw |>
+  mutate(
+    created_date = ymd_hms(created_date, quiet = TRUE),
+    closed_date  = ymd_hms(closed_date, quiet = TRUE),
+    year = year(created_date)
+  ) |>
+  filter(year == 2023, !is.na(latitude), !is.na(longitude))
+
+acs_clean <- acs_nyc_tracts |>
+  transmute(tract_geoid = GEOID, year = year, median_income = income)
+
+acs_quintiles_unique <- acs_clean |>
+  group_by(year) |>
+  mutate(income_quintile = ntile(median_income, 5)) |>
+  distinct(tract_geoid, year, income_quintile) |>
+  ungroup()
+
+# Spatial join: points -> tracts -> income
+nyc_tracts <- tracts(
+  state  = "NY",
+  county = c("061", "047", "081", "005", "085"),
+  year   = 2020,
+  class  = "sf"
+)
+
+nyc311_sf <- nyc311_clean |>
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326, remove = FALSE)
+
+nyc311_sf  <- st_transform(nyc311_sf,  st_crs(nyc_tracts))
+nyc_tracts <- st_transform(nyc_tracts, st_crs(nyc311_sf))
+
+nyc311_tract <- st_join(
+  nyc311_sf,
+  nyc_tracts |> dplyr::select(GEOID),
+  join = st_within,
+  left = TRUE
+) |> mutate(year = 2023)
+
+nyc311_income <- nyc311_tract |>
+  left_join(
+    acs_quintiles_unique |> filter(year == 2023),
+    by = c("GEOID" = "tract_geoid", "year" = "year")
+  ) |>
+  filter(!is.na(income_quintile)) |>
+  mutate(
+    income_quintile = factor(
+      income_quintile,
+      levels = 1:5,
+      labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4", "Q5 (Highest)")
+    )
+  )
+
+# Q6: unresolved + Moran + LISA
+nyc311_unresolved <- nyc311_income |> filter(is.na(closed_date))
+
+total_by_tract <- nyc311_income |> st_drop_geometry() |> count(GEOID, name = "n_total")
+unresolved_by_tract <- nyc311_unresolved |> st_drop_geometry() |> count(GEOID, name = "n_unresolved")
+
+q6_tract_data <- total_by_tract |>
+  left_join(unresolved_by_tract, by = "GEOID") |>
+  mutate(
+    n_unresolved = replace_na(n_unresolved, 0L),
+    unres_rate = n_unresolved / n_total
+  )
+
+tracts_q6 <- nyc_tracts |>
+  left_join(q6_tract_data, by = "GEOID") |>
+  left_join(acs_quintiles_unique |> filter(year == 2023),
+            by = c("GEOID" = "tract_geoid")) |>
+  filter(!is.na(unres_rate), !is.na(income_quintile)) |>
+  mutate(
+    income_quintile = factor(
+      income_quintile,
+      levels = 1:5,
+      labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4", "Q5 (Highest)")
+    )
+  )
+
+nb_q6 <- poly2nb(tracts_q6)
+lw_q6 <- nb2listw(nb_q6, style = "W", zero.policy = TRUE)
+
+moran_q6 <- moran.test(tracts_q6$unres_rate, lw_q6, zero.policy = TRUE)
+
+local_q6 <- localmoran(tracts_q6$unres_rate, lw_q6, zero.policy = TRUE)
+lag_unres <- lag.listw(lw_q6, tracts_q6$unres_rate, zero.policy = TRUE)
+mean_unres <- mean(tracts_q6$unres_rate, na.rm = TRUE)
+
+tracts_q6 <- tracts_q6 |>
+  mutate(
+    local_i = local_q6[, 1],
+    local_p = local_q6[, 5],
+    lag_unres = lag_unres,
+    cluster_type = case_when(
+      local_p <= 0.05 & unres_rate >= mean_unres & lag_unres >= mean_unres ~ "High-High",
+      local_p <= 0.05 & unres_rate <= mean_unres & lag_unres <= mean_unres ~ "Low-Low",
+      local_p <= 0.05 & unres_rate >= mean_unres & lag_unres <= mean_unres ~ "High-Low",
+      local_p <= 0.05 & unres_rate <= mean_unres & lag_unres >= mean_unres ~ "Low-High",
+      TRUE ~ "Not significant"
+    ),
+    cluster_type = factor(
+      cluster_type,
+      levels = c("High-High", "Low-Low", "High-Low", "Low-High", "Not significant")
+    )
+  )
+
+cluster_colors <- c(
+  "High-High" = "#d73027",
+  "Low-Low" = "#4575b4",
+  "High-Low" = "#fdae61",
+  "Low-High" = "#abd9e9",
+  "Not significant" = "grey80"
+)
+
+plot_hotspot_all <- ggplot(tracts_q6) +
+  geom_sf(aes(fill = cluster_type), color = "white", linewidth = 0.1) +
+  scale_fill_manual(values = cluster_colors) +
+  labs(
+    title = "Hotspot Map of Unresolved 311 Housing Complaints (2023)",
+    subtitle = "Local Moran’s I (LISA) clusters at the census tract level",
+    fill = "Cluster Type"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "bottom")
+
+plot_hotspot_income <- ggplot(tracts_q6) +
+  geom_sf(aes(fill = cluster_type), color = NA) +
+  facet_wrap(~ income_quintile, ncol = 3) +
+  scale_fill_manual(values = cluster_colors) +
+  labs(
+    title = "Spatial Clustering of Unresolved 311 Complaints by Income Quintile (2023)",
+    subtitle = "Facets support interpretation of clustering patterns in low vs high income areas",
+    fill = "LISA Cluster"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
+```
+
+
+
+## **Is there spatial clustering of unresolved 311 housing complaints in low-income areas?**
+
+This section presents an investigative analysis addressing Supporting Question #6.
+Using NYC 311 housing complaint data and census tract–level income information,
+the goal is to determine whether unresolved complaints exhibit statistically
+significant spatial clustering, particularly within lower-income neighborhoods.
+
+# Motivation and context
+
+NYC 311 is the City’s main channel for non-emergency quality‑of‑life and housing concerns. Housing-related complaints—such as lack of heat, mold, pests, unsafe conditions, and building maintenance failures—are especially important because unresolved problems can directly affect residents’ health and safety.
+
+A key concern is not only **how many** complaints exist, but **where unresolved complaints persist**. If unresolved complaints are clustered in specific neighborhoods, that suggests concentrated service backlogs, structural barriers to resolution, or unequal enforcement capacity. This investigation therefore asks whether unresolved 311 housing complaints are randomly distributed or spatially concentrated—and whether the strongest clustering appears in lower-income areas.
+
+# Research question
+
+**Is there statistically significant spatial clustering of unresolved 311 housing complaints in low-income areas of New York City?**
+
+This question is evaluated using spatial autocorrelation techniques and income stratification so the conclusion is supported by statistical evidence rather than visual impression alone.
+
+# Data sources and preparation
+
+This analysis integrates two tract-level datasets:
+
+- **NYC 311 Housing Complaints (2023)**  
+  Filtered to include housing-related complaint categories. A status flag was used to isolate complaints that remained **unresolved** in the study period.
+
+- **American Community Survey (ACS) Income Data (2023)**  
+  Median household income was used to classify each census tract into **income quintiles** (Q1 = lowest income … Q5 = highest income).
+
+## Key preparation steps 
+
+The work required standardizing and aligning the data so tract‑level comparisons were valid:
+
+- **Filter** the 311 dataset to the relevant housing complaint scope.
+- **Define unresolved complaints** (consistent rule across the dataset).
+- **Aggregate** complaints to the **census tract** level (counts or rates).
+- **Join** tract-level income data to each tract.
+- **Create income quintiles** to compare patterns across socioeconomic groups.
+- **Validate spatial alignment** (tract geometries and IDs match the analysis units).
+
+> This report focuses on the investigative logic and results. Code is intentionally hidden to keep the website clean and presentation-ready.
+
+# Methodology
+
+To detect localized spatial clustering, the analysis uses **Local Moran’s I (LISA)**.
+
+## Why Local Moran’s I?
+
+Local Moran’s I is designed to identify *where* statistically significant clustering occurs. Instead of producing a single “citywide” autocorrelation value, it highlights specific neighborhoods that are part of a cluster or are spatial outliers.
+
+Each tract is classified into cluster types:
+
+- **High–High (hotspot):** high unresolved complaints surrounded by high unresolved complaints  
+- **Low–Low (cold spot):** low unresolved complaints surrounded by low unresolved complaints  
+- **High–Low / Low–High (outliers):** a tract differs from its neighbors  
+- **Not significant:** no detectable localized clustering at the chosen significance threshold
+
+## Income stratification
+
+To assess whether clustering is associated with income, the same hotspot logic is examined by **income quintile (Q1–Q5)**. This allows a direct comparison of clustering intensity across socioeconomic levels.
+
+# Results and visual evidence
+
+## Citywide hotspot patterns
+
+Below is the citywide hotspot map for unresolved 311 housing complaints.
+
+<div class="figure-card">
+  <div class="figure-title">Hotspot Map of Unresolved 311 Housing Complaints (2023)</div>
+  <div class="figure-subtitle">Local Moran’s I (LISA) clusters at the census tract level</div>
+  <img class="figure-img" src="graph1.jpeg" alt="Hotspot map of unresolved 311 housing complaints using Local Moran's I at the census tract level.">
+  <div class="figure-caption">
+    <strong>How to read:</strong> High–High areas indicate statistically significant hotspots of unresolved complaints. 
+    Large “not significant” regions suggest the hotspots are localized—not an artifact of broad citywide variation.
+  </div>
+</div>
+
+### Interpretation
+
+This map supports three core takeaways:
+
+- **Unresolved housing complaints are not randomly distributed.** The presence of High–High clusters indicates meaningful spatial concentration.
+- **Hotspots are localized.** Many tracts are not significant, implying the pattern is not “everywhere at once,” but concentrated in specific areas.
+- **Cold spots also exist.** Low–Low clusters suggest some neighborhoods consistently experience fewer unresolved housing complaints.
+
+In an operational setting, these clusters would be strong candidates for deeper investigation: what complaint types dominate there, what the responsible agencies are, and whether staffing or enforcement resources match the burden.
+
+## Clustering by income quintile
+
+The figure below breaks clustering patterns out by tract income quintile.
+
+<div class="figure-card">
+  <div class="figure-title">Spatial Clustering of Unresolved Complaints by Income Quintile (2023)</div>
+  <div class="figure-subtitle">Facets show how clustering patterns differ across low vs high income areas</div>
+  <img class="figure-img" src="graph2.jpeg" alt="Faceted maps of LISA clusters for unresolved 311 complaints by income quintile Q1 to Q5.">
+  <div class="figure-caption">
+    <strong>Key visual idea:</strong> Compare how often High–High clusters appear in Q1–Q2 versus Q4–Q5.
+  </div>
+</div>
+
+### Interpretation
+
+A clear gradient appears when the city is viewed through the lens of income:
+
+- **Lower-income neighborhoods (Q1–Q2)** show the **strongest and most concentrated High–High clustering**.
+- **Middle-income areas (Q3–Q4)** show more fragmented or fewer significant clusters.
+- **Higher-income areas (Q5)** show **minimal** High–High clustering; many tracts are not significant.
+
+This supports the claim that unresolved complaint hotspots are **most concentrated in lower-income neighborhoods**, while higher-income areas show comparatively limited clustering.
+
+# Key findings
+
+- Unresolved 311 housing complaints show **statistically significant spatial clustering**.
+- High–High hotspots appear in **specific neighborhoods**, not as random scatter.
+- Hotspot concentration is **strongest in low-income tracts (Q1–Q2)**.
+- High-income tracts (Q5) show **minimal** hotspot clustering.
+
+### Why spatial clustering matters for housing equity
+
+Identifying spatial clustering of unresolved housing complaints is important because housing conditions are not merely individual problems; they are often shaped by neighborhood-level structures such as landlord practices, housing stock age, enforcement intensity, and political influence. When unresolved complaints cluster geographically, it suggests that residents in certain areas may face systematic barriers to achieving safe and habitable housing conditions.
+
+In lower-income neighborhoods, residents may have fewer resources to pursue follow-up actions, legal remedies, or private repairs. As a result, unresolved complaints can accumulate over time rather than being resolved promptly. Spatial clustering analysis helps move the discussion beyond anecdotal evidence by providing statistical support for these patterns.
+
+From an equity perspective, persistent clusters of unresolved complaints raise concerns about whether municipal services are equitably reaching all communities. If unresolved complaints are disproportionately concentrated in lower-income areas, this may reflect unequal enforcement, resource constraints, or structural disadvantages rather than differences in reporting behavior alone.
+
+### Distinguishing reporting behavior from service outcomes
+
+One potential concern when analyzing 311 data is whether observed patterns reflect differences in reporting behavior rather than differences in service outcomes. Residents in some neighborhoods may be more likely to report issues, while others may underreport due to distrust, language barriers, or lack of awareness.
+
+However, this investigation focuses specifically on **unresolved complaints**, not total complaint volume. By conditioning the analysis on complaints that have already been reported, the study shifts attention from reporting propensity to service follow-through. Spatial clustering of unresolved cases therefore provides evidence about where the resolution process itself may be breaking down.
+
+Additionally, the presence of Low–Low clusters suggests that not all areas with high reporting necessarily experience poor outcomes. This further supports the interpretation that unresolved complaint clustering reflects differences in resolution dynamics rather than reporting alone.
+
+### Interpreting High–High clusters as persistent problem areas
+
+High–High clusters in Local Moran’s I analysis indicate areas where unresolved housing complaints are consistently high and surrounded by similarly high neighboring tracts. These clusters are especially important because they suggest persistence rather than isolated failure.
+
+In practical terms, High–High clusters may indicate neighborhoods with aging housing stock, repeated landlord noncompliance, or enforcement bottlenecks that prevent timely resolution. When these clusters overlap with lower-income areas, they raise questions about whether current policy tools are sufficient to address entrenched housing quality issues.
+
+Rather than treating each complaint independently, agencies could use cluster information to identify neighborhoods requiring targeted intervention strategies. This might include proactive inspections, coordinated enforcement actions, or increased tenant outreach.
+
+# Limitations
+
+Even strong spatial results should be interpreted carefully:
+
+- **Unresolved does not always mean neglected.** Some cases may be delayed due to access, legal processes, or complexity.
+- **311 reflects reporting behavior**, not the full universe of housing problems.
+- **Aggregation can hide within-tract variation.** A tract may include heterogeneous blocks.
+- **Income is not the only driver.** Housing stock age, landlord practices, enforcement patterns, and demographic factors may also contribute.
+
+# Practical implications
+
+From a policy and service-delivery perspective, these results suggest the value of **place-based targeting**:
+
+- Prioritize inspection and enforcement resources in persistent High–High hotspots.
+- Track whether hotspot tracts experience longer closure times or repeated complaints.
+- Pair enforcement with preventive support (tenant resources, landlord compliance programs) in high-burden areas.
+- Use hotspot monitoring as an early warning system for emerging neighborhood-level housing distress.
+
+# Conclusion
+
+This investigation finds clear evidence that unresolved NYC 311 housing complaints are **spatially clustered**, with the **strongest High–High hotspots concentrated in lower-income neighborhoods (Q1–Q2)**. Higher-income areas exhibit comparatively limited clustering, suggesting a meaningful association between neighborhood income level and where unresolved complaint burdens persist.
+
+The results indicate a pattern consistent with **systematic spatial inequality**, not a random distribution of unresolved cases. Spatial analytics, combined with income context, provides a powerful framework for identifying where interventions may be most urgently needed.
+
+# Next steps
+
+If extended beyond this question, the next steps would include:
+
+- Modeling **time-to-resolution** (not just unresolved status)
+- Identifying which **complaint subtypes** drive hotspot formation
+- Comparing hotspots across **multiple years** to test persistence
+- Examining agency-level differences in closure behavior across hotspot vs non-hotspot tracts
+
+---

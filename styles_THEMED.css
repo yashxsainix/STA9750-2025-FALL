@@ -1,0 +1,147 @@
+
+/* ===========================
+   Custom Theme (Teal)
+   =========================== */
+
+:root{
+  --primary: #2F6F6D;
+  --primary-dark: #214E4C;
+  --accent: #E9C46A;
+  --bg: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --card: #f7faf9;
+  --border: rgba(33,78,76,.18);
+}
+
+/* Base typography */
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  line-height: 1.6;
+}
+
+a, a:hover{ color: var(--primary); }
+code, pre{ font-size: 0.95em; }
+
+/* Headings */
+h1, h2, h3, h4{
+  color: var(--primary-dark);
+  letter-spacing: .2px;
+}
+h1{ font-size: 2.1rem; }
+h2{ margin-top: 2.0rem; padding-top: 0.25rem; border-top: 1px solid var(--border); }
+h3{ margin-top: 1.35rem; }
+
+/* Hero */
+.hero{
+  background: linear-gradient(135deg, rgba(47,111,109,.10), rgba(233,196,106,.16));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 24px;
+  margin: 0 0 18px 0;
+}
+.hero-kicker{
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: .78rem;
+  margin-bottom: 6px;
+}
+.hero-title{
+  margin: 0 0 8px 0;
+  font-weight: 800;
+}
+.hero-subtitle{
+  margin: 0 0 12px 0;
+  color: var(--muted);
+  max-width: 78ch;
+}
+.hero-badges .badge{
+  display: inline-block;
+  padding: 6px 10px;
+  margin-right: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.75);
+  font-size: .82rem;
+  color: var(--primary-dark);
+}
+
+/* TOC */
+.tocify{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.tocify .active{
+  background: rgba(47,111,109,.12);
+  border-left: 4px solid var(--primary);
+}
+
+/* Callouts (blockquote) */
+blockquote{
+  border-left: 4px solid var(--primary);
+  background: rgba(47,111,109,.06);
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--primary-dark);
+}
+
+/* Figure cards */
+.figure-card{
+  border: 1px solid var(--border);
+  background: rgba(47,111,109,.04);
+  border-radius: 16px;
+  padding: 14px 14px 12px 14px;
+  margin: 16px 0 18px 0;
+}
+.figure-title{
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 2px;
+}
+.figure-subtitle{
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.figure-img{
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.figure-caption{
+  margin-top: 10px;
+  color: #374151;
+  font-size: .95rem;
+}
+
+/* Tables */
+table{
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+thead th{
+  background: rgba(47,111,109,.10);
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+tbody tr:nth-child(even){ background: rgba(47,111,109,.04); }
+th, td{ padding: 10px 12px; }
+
+/* Footer note */
+.footer-note{
+  margin-top: 26px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .92rem;
+}
